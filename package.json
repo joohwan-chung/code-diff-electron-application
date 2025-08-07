@@ -1,0 +1,113 @@
+{
+  "name": "code-diff-app",
+  "version": "1.0.0",
+  "description": "Electron 기반 코드 비교 어플리케이션",
+  "main": "public/electron.js",
+  "homepage": "./",
+  "author": {
+    "name": "Code Diff App Team"
+  },
+  "scripts": {
+    "start": "craco start",
+    "build": "craco build",
+    "test": "craco test",
+    "eject": "react-scripts eject",
+    "electron": "cross-env NODE_ENV=production electron .",
+    "electron-dev": "cross-env NODE_ENV=development concurrently \"npm start\" \"wait-on http://localhost:3000 && electron .\"",
+    "electron-pack": "cross-env NODE_ENV=production electron-builder",
+    "preelectron-pack": "npm run build",
+    "build:win": "cross-env NODE_ENV=production npm run build && electron-builder --win",
+    "build:mac": "cross-env NODE_ENV=production npm run build && electron-builder --mac",
+    "build:all": "cross-env NODE_ENV=production npm run build && electron-builder -mwl",
+    "dist": "cross-env NODE_ENV=production npm run build && electron-builder"
+  },
+  "dependencies": {
+    "@craco/craco": "^7.1.0",
+    "diff": "^5.1.0",
+    "path-browserify": "^1.0.1",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-scripts": "5.0.1",
+    "react-syntax-highlighter": "^15.5.0",
+    "styled-components": "^6.0.0"
+  },
+  "devDependencies": {
+    "concurrently": "^8.0.1",
+    "cross-env": "^10.0.0",
+    "electron": "^25.0.0",
+    "electron-builder": "^24.0.0",
+    "wait-on": "^7.0.1"
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  },
+  "build": {
+    "appId": "com.codediff.app",
+    "productName": "CodeDiffApp",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "build/**/*",
+      "public/electron.js",
+      "public/preload.js"
+    ],
+    "mac": {
+      "category": "public.app-category.developer-tools",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ]
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "linux": {
+      "target": "AppImage"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    },
+    "electronVersion": "25.9.8",
+    "compression": "maximum",
+    "removePackageScripts": true,
+    "removePackageKeywords": true
+  }
+}
