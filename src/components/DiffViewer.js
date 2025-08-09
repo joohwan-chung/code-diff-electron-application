@@ -209,8 +209,9 @@ function DiffViewer({ fileA, fileB, settings, onReset }) {
   const [language, setLanguage] = useState('javascript');
   const leftContainerRef = useRef(null);
   const rightContainerRef = useRef(null);
-  const [isScrolling, setIsScrolling] = useState(false);
-  const scrollTimeoutRef = useRef(null);
+  // 스크롤 동기화 중인지 여부 (state 대신 ref 사용으로 렌더링 억제)
+  const isSyncingRef = useRef(false);
+  const rafIdRef = useRef(null);
 
 
   // 파일 확장자로부터 언어 추정
@@ -251,64 +252,71 @@ function DiffViewer({ fileA, fileB, settings, onReset }) {
     }
   }, [fileA, fileB, settings.diffMode]);
 
-  // 컴포넌트 언마운트 시 타이머 정리
+  // 컴포넌트 언마운트 시 RAF 정리
   useEffect(() => {
     return () => {
-      if (scrollTimeoutRef.current) {
-        clearTimeout(scrollTimeoutRef.current);
+      if (rafIdRef.current) {
+        cancelAnimationFrame(rafIdRef.current);
       }
     };
   }, []);
 
 
 
-  // 동기 스크롤 처리
-  const handleScroll = (sourceRef, targetRef) => {
-    if (isScrolling) return;
-    
-    setIsScrolling(true);
+  // 동기 스크롤 처리 (수직/수평 동기화, ref 기반 락)
+  const handleScroll = useCallback((sourceRef, targetRef) => {
+    if (isSyncingRef.current) return;
     const source = sourceRef.current;
     const target = targetRef.current;
-    
-    if (source && target) {
-      // 스크롤 가능한 높이 계산
-      const sourceScrollableHeight = source.scrollHeight - source.clientHeight;
-      const targetScrollableHeight = target.scrollHeight - target.clientHeight;
-      
-      if (sourceScrollableHeight > 0 && targetScrollableHeight > 0) {
-        // 스크롤 비율 계산 (0~1 사이)
-        const scrollRatio = source.scrollTop / sourceScrollableHeight;
-        // 대상 컨테이너의 스크롤 위치 계산
-        const targetScrollTop = scrollRatio * targetScrollableHeight;
-        
-        // 스크롤 위치 설정 (부드러운 동기화)
-        requestAnimationFrame(() => {
-          target.scrollTop = targetScrollTop;
-        });
-      }
-    }
-    
-    // 스크롤 상태 리셋 (디바운싱)
-    if (scrollTimeoutRef.current) {
-      clearTimeout(scrollTimeoutRef.current);
-    }
-    scrollTimeoutRef.current = setTimeout(() => {
-      setIsScrolling(false);
-    }, 30);
-  };
 
-  // 스크롤 이벤트 throttle 처리
-  const handleLeftScroll = useCallback(() => {
-    if (!isScrolling) {
-      handleScroll(leftContainerRef, rightContainerRef);
+    if (!source || !target) return;
+
+    // 기존 RAF가 있다면 취소하고 최신 프레임에 맞춰 동기화
+    if (rafIdRef.current) {
+      cancelAnimationFrame(rafIdRef.current);
     }
-  }, [isScrolling]);
+
+    isSyncingRef.current = true;
+    rafIdRef.current = requestAnimationFrame(() => {
+      // 수직 동기화
+      const sourceScrollableHeight = Math.max(0, source.scrollHeight - source.clientHeight);
+      const targetScrollableHeight = Math.max(0, target.scrollHeight - target.clientHeight);
+      if (sourceScrollableHeight > 0 && targetScrollableHeight > 0) {
+        const verticalRatio = source.scrollTop / sourceScrollableHeight;
+        const nextTop = verticalRatio * targetScrollableHeight;
+        if (Math.abs(target.scrollTop - nextTop) > 0.5) {
+          target.scrollTop = nextTop;
+        }
+      }
+
+      // 수평 동기화
+      const sourceScrollableWidth = Math.max(0, source.scrollWidth - source.clientWidth);
+      const targetScrollableWidth = Math.max(0, target.scrollWidth - target.clientWidth);
+      if (sourceScrollableWidth > 0 && targetScrollableWidth > 0) {
+        const horizontalRatio = source.scrollLeft / sourceScrollableWidth;
+        const nextLeft = horizontalRatio * targetScrollableWidth;
+        if (Math.abs(target.scrollLeft - nextLeft) > 0.5) {
+          target.scrollLeft = nextLeft;
+        }
+      }
+
+      // 다음 이벤트에서 반대편 onScroll이 동작해도 무시되도록 한 틱 뒤 해제
+      rafIdRef.current = requestAnimationFrame(() => {
+        isSyncingRef.current = false;
+      });
+    });
+  }, []);
+
+  // 스크롤 이벤트 (좌/우)
+  const handleLeftScroll = useCallback(() => {
+    if (isSyncingRef.current) return;
+    handleScroll(leftContainerRef, rightContainerRef);
+  }, [handleScroll]);
 
   const handleRightScroll = useCallback(() => {
-    if (!isScrolling) {
-      handleScroll(rightContainerRef, leftContainerRef);
-    }
-  }, [isScrolling]);
+    if (isSyncingRef.current) return;
+    handleScroll(rightContainerRef, leftContainerRef);
+  }, [handleScroll]);
 
   const generateDiff = () => {
     if (!fileA || !fileB) return;
