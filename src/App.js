@@ -76,12 +76,13 @@ function App() {
   const [settings, setSettings] = useState({
     theme: 'light',
     diffMode: 'line',
+    viewMode: 'split',
     showLineNumbers: true,
     syntaxHighlighting: true
   });
   const [isLoading, setIsLoading] = useState(true);
 
-    useEffect(() => {
+  useEffect(() => {
     // 설정 로드
     const loadSettings = async () => {
       try {
@@ -93,7 +94,7 @@ function App() {
         setIsLoading(false);
       }
     };
-    
+
     loadSettings();
   }, []);
 
@@ -115,6 +116,11 @@ function App() {
 
   const handleDiffModeChange = (diffMode) => {
     const newSettings = { ...settings, diffMode };
+    handleSettingsChange(newSettings);
+  };
+
+  const handleViewModeChange = (viewMode) => {
+    const newSettings = { ...settings, viewMode };
     handleSettingsChange(newSettings);
   };
 
@@ -178,6 +184,9 @@ function App() {
     window.electronAPI.onOpenFileB(handleOpenFileB);
     window.electronAPI.onChangeTheme(handleChangeTheme);
     window.electronAPI.onChangeDiffMode(handleChangeDiffMode);
+    if (window.electronAPI.onChangeViewMode) {
+      window.electronAPI.onChangeViewMode((event, mode) => handleViewModeChange(mode));
+    }
     window.electronAPI.onToggleLineNumbers(handleToggleLineNumbers);
     window.electronAPI.onToggleSyntaxHighlighting(handleToggleSyntaxHighlighting);
 
@@ -187,6 +196,9 @@ function App() {
       window.electronAPI.removeAllListeners('open-file-b');
       window.electronAPI.removeAllListeners('change-theme');
       window.electronAPI.removeAllListeners('change-diff-mode');
+      if (window.electronAPI.removeAllListeners) {
+        window.electronAPI.removeAllListeners('change-view-mode');
+      }
       window.electronAPI.removeAllListeners('toggle-line-numbers');
       window.electronAPI.removeAllListeners('toggle-syntax-highlighting');
     };
@@ -207,12 +219,12 @@ function App() {
 
         <MainContent>
           {isLoading ? (
-            <div style={{ 
-              display: 'flex', 
-              justifyContent: 'center', 
-              alignItems: 'center', 
+            <div style={{
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
               height: '100%',
-              color: currentTheme.text 
+              color: currentTheme.text
             }}>
               <div>로딩 중...</div>
             </div>
@@ -228,7 +240,7 @@ function App() {
                 <DiffViewer
                   fileA={files.fileA}
                   fileB={files.fileB}
-                  settings={{ ...settings, onDiffModeChange: handleDiffModeChange }}
+                  settings={{ ...settings, onDiffModeChange: handleDiffModeChange, onViewModeChange: handleViewModeChange }}
                   onReset={() => setFiles({ fileA: null, fileB: null })}
                 />
               )}

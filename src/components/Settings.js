@@ -134,6 +134,22 @@ function Settings({ settings, onSettingsChange, onClose }) {
 
         <SettingItem>
           <SettingLabel>
+            뷰 모드
+            <Select
+              value={settings.viewMode || 'split'}
+              onChange={(e) => handleSettingChange('viewMode', e.target.value)}
+            >
+              <option value="split">분할(Split)</option>
+              <option value="unified">단일(Unified)</option>
+            </Select>
+          </SettingLabel>
+          <Description>
+            분할/단일 보기 전환.
+          </Description>
+        </SettingItem>
+
+        <SettingItem>
+          <SettingLabel>
             줄 번호 표시
             <Checkbox
               type="checkbox"
